@@ -1,29 +1,43 @@
+import os
 import json
 import logging
 import time
+import subprocess
 from typing import Optional, Dict, Any, Union
 from .config.config import CONFIG
-from .llama_manager import LlamaManager
 import requests
 
 class LLMInterface:
-    def __init__(self):
+    def __init__(self, model_path=None):
         self.logger = logging.getLogger('RootBot.LLM')
-        self.llama_manager = LlamaManager()
+        if model_path is None:
+            model_path = os.path.join(os.path.dirname(__file__), 'models/Llama-3.2-1B-Instruct.Q6_K.llamafile')
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found: {model_path}")
+        self.model_path = model_path
+        # Make the model file executable
+        os.chmod(model_path, 0o755)
+        self.process = None
+        self.port = CONFIG.get('LLAMAFILE_PORT', 8080)
         self.fallback_mode = False
         self.last_error_time = 0
         self.error_cooldown = 300  # 5 minutes cooldown
-        self.api_url = f"http://localhost:{CONFIG['LLAMAFILE_PORT']}/completion"
+        self.api_url = f"http://localhost:{self.port}/completion"
 
     def _ensure_server_running(self) -> bool:
-        """Ensure LlamaFile server is running"""
-        if not self.llama_manager.is_server_running():
-            success, msg = self.llama_manager.start_server()
-            if not success:
-                self.logger.error(f"Failed to start LlamaFile server: {msg}")
+        """Ensure the llamafile server is running"""
+        if self.process is None or self.process.poll() is not None:
+            try:
+                self.process = subprocess.Popen(
+                    [self.model_path, '--server', '--port', str(self.port)],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                time.sleep(5)  # Wait for server to start
+                return True
+            except Exception as e:
+                logging.error(f"Failed to start LLM server: {e}")
                 return False
-            # Wait for server to initialize
-            time.sleep(5)
         return True
 
     def _handle_llm_error(self, error: Exception) -> None:
@@ -190,7 +204,12 @@ Format your response as JSON with:
             }
 
     def shutdown(self):
-        """Cleanup and shutdown LLM interface"""
-        if self.llama_manager.is_server_running():
-            self.llama_manager.stop_server()
+        """Shutdown the LLM server"""
+        if self.process:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+            self.process = None
 

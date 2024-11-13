@@ -7,9 +7,13 @@ from unittest.mock import patch, MagicMock
 from root_bot import RootBot, LLMInterface, TaskManager
 from root_bot.config_validator import ConfigValidator
 from root_bot.config.config import CONFIG
+from unittest.mock import MagicMock
 
 class TestRootBot(unittest.TestCase):
     def setUp(self):
+        self.bot = RootBot()
+        self.bot.llm = MagicMock()
+        self.bot.llm.generate_response.return_value = "test response"
         """Set up test environment"""
         # Create temporary directories for testing
         self.test_dir = tempfile.mkdtemp()

@@ -13,9 +13,10 @@ class LlamaManager:
     """Manager for LlamaFile operations and lifecycle"""
     
     LLAMAFILE_URLS = {
-        'tinyllama-1.1b': 'https://huggingface.co/jartine/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/TinyLlama-1.1B-Chat-v1.0.Q4_K_M.gguf',
-        'llamafile': 'https://github.com/Mozilla-Ocho/llamafile/releases/download/0.1/llamafile'
+        'llama-3.2-1b': 'https://huggingface.co/Mozilla/Llama-3.2-1B-Instruct-llamafile/resolve/main/Llama-3.2-1B-Instruct.Q6_K.llamafile?download=true',
+        'llamafile': 'https://huggingface.co/Mozilla/Llama-3.2-1B-Instruct-llamafile/resolve/main/Llama-3.2-1B-Instruct.Q6_K.llamafile?download=true'
     }
+
     
     def __init__(self):
         self.logger = logging.getLogger('RootBot.LlamaManager')
@@ -72,7 +73,6 @@ class LlamaManager:
         except Exception as e:
             self.logger.error(f"Failed to download LlamaFile: {str(e)}")
             return False, str(e)
-            
     def download_model(self, force: bool = False) -> Tuple[bool, str]:
         """Download the LLM model"""
         try:
@@ -83,20 +83,25 @@ class LlamaManager:
             os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
             
             # Download model
-            self.logger.info("Downloading model...")
-            response = requests.get(self.LLAMAFILE_URLS['tinyllama-1.1b'], stream=True)
+            self.logger.info("Downloading Llama 3.2 1B model...")
+            response = requests.get(self.LLAMAFILE_URLS['llama-3.2-1b'], stream=True)
             response.raise_for_status()
             
             # Save with temporary name first
             temp_path = f"{self.model_path}.tmp"
             with open(temp_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+                    if chunk:  # Filter out keep-alive chunks
+                        f.write(chunk)
+                    
+            # Make executable
+            os.chmod(temp_path, stat.S_IRWXU)
                     
             # Move to final location
             os.rename(temp_path, self.model_path)
             
             return True, "Model downloaded successfully"
+
             
         except Exception as e:
             self.logger.error(f"Failed to download model: {str(e)}")
@@ -116,8 +121,10 @@ class LlamaManager:
             '--server',
             '--port', str(self.server_port),
             '--model', self.model_path,
-            '--ctx-size', '2048',
+            '--ctx-size', '4096',  # Increased context size for Llama 3.2
             '--threads', str(os.cpu_count() or 4),
+            '--temp', '0.7',  # Temperature for more focused responses
+            '--repeat-penalty', '1.1',  # Prevent repetitive outputs
             '--embedding'  # Enable embedding API
         ]
         return cmd
@@ -206,3 +213,4 @@ class LlamaManager:
                 pass
                 
         return status
+

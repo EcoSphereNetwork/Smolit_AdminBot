@@ -7,12 +7,13 @@ CONFIG = {
     
     # LlamaFile settings
     'LLAMAFILE_PATH': '/usr/local/bin/llamafile',
-    'MODEL_PATH': os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models/TinyLlama-1.1B-Chat-v1.0.Q4_K_M.gguf'),
+    'MODEL_PATH': os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models/Llama-3.2-1B-Instruct.Q6_K.llamafile'),
     'LLAMAFILE_PORT': 8080,
     'LLAMAFILE_SETTINGS': {
-        'ctx_size': 2048,
+        'ctx_size': 4096,
         'threads': os.cpu_count() or 4,
-        'temp': 0.2,
+        'temp': 0.7,
+        'repeat_penalty': 1.1,
         'embedding': True,
         'gpu_layers': 0  # Set to higher number if GPU available
     },

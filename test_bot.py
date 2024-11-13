@@ -29,7 +29,15 @@ class TestRootBot(unittest.TestCase):
             'SHORT_TERM_MEMORY_SIZE': 100,
             'LONG_TERM_MEMORY_FILE': 'test_memory.json',
             'LLAMAFILE_PATH': '/usr/local/bin/llamafile',
-            'MODEL_PATH': os.path.join(self.test_dir, 'model.bin'),
+            'MODEL_PATH': os.path.join(self.test_dir, 'Llama-3.2-1B-Instruct.Q6_K.llamafile'),
+            'LLAMAFILE_SETTINGS': {
+                'ctx_size': 4096,
+                'threads': os.cpu_count() or 4,
+                'temp': 0.7,
+                'repeat_penalty': 1.1,
+                'embedding': True,
+                'gpu_layers': 0
+            },
             'RESOURCE_LIMITS': {
                 'max_cpu_per_process': 50,
                 'max_memory_per_process': 25,

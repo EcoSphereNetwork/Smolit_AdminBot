@@ -115,51 +115,68 @@ class LLMInterface:
         return []
 
     def _build_analysis_prompt(self, metrics: Dict[str, Any]) -> str:
-        """Build a detailed analysis prompt"""
-        return f"""
-        Analyze these system metrics and provide detailed recommendations:
-        CPU Usage: {metrics['cpu_percent']}%
-        Memory Usage: {metrics['memory_percent']}%
-        Disk Usage: {metrics['disk_usage']}%
-        Network Connections: {metrics['network_connections']}
-        
-        Consider:
-        1. Resource utilization patterns
-        2. Potential bottlenecks
-        3. Security implications
-        4. Performance optimization opportunities
-        
-        Provide analysis in JSON format with fields:
-        - status: overall system status (normal/warning/critical)
-        - issues: list of identified issues
-        - recommendations: list of recommended actions
-        - priority: priority level of actions (high/medium/low)
-        """
+        """Build a detailed analysis prompt optimized for Llama 3.2"""
+        return f"""<|im_start|>system
+You are a system administrator analyzing server metrics. Provide detailed, actionable insights.
+<|im_end|>
+<|im_start|>user
+Analyze these system metrics and provide recommendations:
+- CPU Usage: {metrics['cpu_percent']}%
+- Memory Usage: {metrics['memory_percent']}%
+- Disk Usage: {metrics['disk_usage']}%
+- Network Connections: {metrics['network_connections']}
+- Load Average: {metrics.get('load_average', 'N/A')}
+- Uptime: {metrics.get('uptime', 'N/A')} seconds
+
+Consider:
+1. Resource utilization patterns
+2. Potential bottlenecks
+3. Security implications
+4. Performance optimization opportunities
+
+Format your response as JSON with:
+{
+  "status": "normal/warning/critical",
+  "issues": ["list of identified issues"],
+  "recommendations": ["list of recommended actions"],
+  "priority": "high/medium/low"
+}
+<|im_end|>
+<|im_start|>assistant"""
 
     def evaluate_command_safety(self, command: str) -> Dict[str, Union[bool, str, list]]:
-        """Enhanced command safety evaluation"""
+        """Enhanced command safety evaluation using Llama 3.2"""
         context = {
             "allowed_commands": CONFIG['ALLOWED_COMMANDS'],
             "blocked_commands": CONFIG['BLOCKED_COMMANDS']
         }
         
-        prompt = f"""
-        Evaluate the safety of this system command:
-        {command}
-        
-        Consider:
-        1. Potential system damage
-        2. Data loss risks
-        3. Security vulnerabilities
-        4. Resource implications
-        5. Side effects
-        
-        Respond in JSON format with:
-        - safe: boolean
-        - risk_level: (low/medium/high)
-        - concerns: list of specific concerns
-        - alternatives: list of safer alternatives
-        """
+        prompt = f"""<|im_start|>system
+You are a security-focused system administrator evaluating command safety. Be conservative in your assessment.
+<|im_end|>
+<|im_start|>user
+Evaluate the safety of this system command:
+{command}
+
+Consider these aspects:
+1. Potential system damage or data loss
+2. Security vulnerabilities
+3. Resource consumption
+4. Side effects and unintended consequences
+5. Privilege escalation risks
+
+Allowed commands: {', '.join(context['allowed_commands'])}
+Blocked commands: {', '.join(context['blocked_commands'])}
+
+Format your response as JSON with:
+{
+  "safe": boolean,
+  "risk_level": "low/medium/high",
+  "concerns": ["list specific security concerns"],
+  "alternatives": ["list safer alternative commands"]
+}
+<|im_end|>
+<|im_start|>assistant"""
         
         response = self.generate_response(prompt, context=context)
         try:

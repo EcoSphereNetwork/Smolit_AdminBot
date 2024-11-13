@@ -1,7 +1,8 @@
 import subprocess
 import json
 import logging
-from typing import Optional, Dict, Any
+import time
+from typing import Optional, Dict, Any, Union
 from .config.config import CONFIG
 
 class LLMInterface:
@@ -9,59 +10,85 @@ class LLMInterface:
         self.logger = logging.getLogger('RootBot.LLM')
         self.model_path = CONFIG['MODEL_PATH']
         self.llamafile_path = CONFIG['LLAMAFILE_PATH']
+        self.fallback_mode = False
+        self.last_error_time = 0
+        self.error_cooldown = 300  # 5 minutes cooldown
 
-    def generate_response(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
-        """Generate a response using the Llamafile model"""
-        try:
-            # Prepare the command to run llamafile
-            cmd = [
-                self.llamafile_path,
-                '-m', self.model_path,
-                '--temp', '0.7',
-                '--ctx-size', '2048',
-                '-p', prompt
-            ]
-            
-            # Run the model
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            
-            output, error = process.communicate(timeout=30)
-            
-            if process.returncode != 0:
-                self.logger.error(f"LLM error: {error}")
-                return ""
+    def _handle_llm_error(self, error: Exception) -> None:
+        """Handle LLM errors with cooldown and fallback"""
+        current_time = time.time()
+        if current_time - self.last_error_time > self.error_cooldown:
+            self.fallback_mode = True
+            self.last_error_time = current_time
+            self.logger.error(f"LLM error, switching to fallback mode: {str(error)}")
+
+    def _fallback_response(self, prompt: str) -> str:
+        """Provide deterministic responses when LLM is unavailable"""
+        if "analyze" in prompt.lower():
+            return json.dumps({
+                "status": "warning",
+                "issues": ["LLM unavailable - using fallback mode"],
+                "recommendations": ["Monitor system metrics", "Check logs", "Verify resources"]
+            })
+        return "LLM unavailable - using fallback mode"
+
+    def generate_response(self, 
+                         prompt: str, 
+                         context: Optional[Dict[str, Any]] = None,
+                         max_retries: int = 3,
+                         timeout: int = 30) -> str:
+        """Generate a response with retries and fallback"""
+        if self.fallback_mode:
+            return self._fallback_response(prompt)
+
+        for attempt in range(max_retries):
+            try:
+                cmd = [
+                    self.llamafile_path,
+                    '-m', self.model_path,
+                    '--temp', '0.7',
+                    '--ctx-size', '2048',
+                    '-p', prompt
+                ]
                 
-            return output.strip()
-            
-        except subprocess.TimeoutExpired:
-            process.kill()
-            self.logger.error("LLM response generation timed out")
-            return ""
-        except Exception as e:
-            self.logger.error(f"LLM generation error: {str(e)}")
-            return ""
+                if context:
+                    cmd.extend(['--context', json.dumps(context)])
+                
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                
+                output, error = process.communicate(timeout=timeout)
+                
+                if process.returncode != 0:
+                    raise RuntimeError(f"LLM process failed: {error}")
+                    
+                return output.strip()
+                
+            except Exception as e:
+                self.logger.warning(f"LLM attempt {attempt + 1} failed: {str(e)}")
+                if attempt == max_retries - 1:
+                    self._handle_llm_error(e)
+                    return self._fallback_response(prompt)
+                time.sleep(1)  # Brief pause between retries
 
     def analyze_system_state(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze system metrics and generate recommendations"""
-        prompt = f"""
-        Analyze these system metrics and provide recommendations:
-        CPU Usage: {metrics['cpu_percent']}%
-        Memory Usage: {metrics['memory_percent']}%
-        Disk Usage: {metrics['disk_usage']}%
-        Network Connections: {metrics['network_connections']}
+        """Analyze system metrics with enhanced context"""
+        context = {
+            "previous_states": self._get_recent_states(),
+            "thresholds": {
+                "cpu": CONFIG['CPU_THRESHOLD'],
+                "memory": CONFIG['MEMORY_THRESHOLD'],
+                "disk": CONFIG['DISK_THRESHOLD']
+            }
+        }
         
-        Provide analysis in JSON format with fields:
-        - status: overall system status (normal/warning/critical)
-        - issues: list of identified issues
-        - recommendations: list of recommended actions
-        """
+        prompt = self._build_analysis_prompt(metrics)
+        response = self.generate_response(prompt, context=context)
         
-        response = self.generate_response(prompt)
         try:
             return json.loads(response)
         except json.JSONDecodeError:
@@ -69,18 +96,69 @@ class LLMInterface:
             return {
                 "status": "error",
                 "issues": ["Failed to analyze system state"],
-                "recommendations": []
+                "recommendations": ["Check system manually"]
             }
 
-    def evaluate_command_safety(self, command: str) -> bool:
-        """Use LLM to evaluate if a command is safe to execute"""
+    def _get_recent_states(self) -> list:
+        """Retrieve recent system states for context"""
+        # TODO: Implement state history tracking
+        return []
+
+    def _build_analysis_prompt(self, metrics: Dict[str, Any]) -> str:
+        """Build a detailed analysis prompt"""
+        return f"""
+        Analyze these system metrics and provide detailed recommendations:
+        CPU Usage: {metrics['cpu_percent']}%
+        Memory Usage: {metrics['memory_percent']}%
+        Disk Usage: {metrics['disk_usage']}%
+        Network Connections: {metrics['network_connections']}
+        
+        Consider:
+        1. Resource utilization patterns
+        2. Potential bottlenecks
+        3. Security implications
+        4. Performance optimization opportunities
+        
+        Provide analysis in JSON format with fields:
+        - status: overall system status (normal/warning/critical)
+        - issues: list of identified issues
+        - recommendations: list of recommended actions
+        - priority: priority level of actions (high/medium/low)
+        """
+
+    def evaluate_command_safety(self, command: str) -> Dict[str, Union[bool, str, list]]:
+        """Enhanced command safety evaluation"""
+        context = {
+            "allowed_commands": CONFIG['ALLOWED_COMMANDS'],
+            "blocked_commands": CONFIG['BLOCKED_COMMANDS']
+        }
+        
         prompt = f"""
-        Evaluate if this system command is safe to execute:
+        Evaluate the safety of this system command:
         {command}
         
-        Respond with only 'safe' or 'unsafe'.
-        Consider potential system damage, data loss, or security risks.
+        Consider:
+        1. Potential system damage
+        2. Data loss risks
+        3. Security vulnerabilities
+        4. Resource implications
+        5. Side effects
+        
+        Respond in JSON format with:
+        - safe: boolean
+        - risk_level: (low/medium/high)
+        - concerns: list of specific concerns
+        - alternatives: list of safer alternatives
         """
         
-        response = self.generate_response(prompt).lower().strip()
-        return response == 'safe'
+        response = self.generate_response(prompt, context=context)
+        try:
+            return json.loads(response)
+        except json.JSONDecodeError:
+            return {
+                "safe": False,
+                "risk_level": "high",
+                "concerns": ["Failed to analyze command safety"],
+                "alternatives": []
+            }
+

@@ -1,5 +1,6 @@
 # Production dependencies
--r requiements.txt
+-r requirements.txt
+
 
 # Testing
 pytest>=7.4.0
@@ -26,3 +27,4 @@ types-psutil>=5.9.5
 # Security
 bandit>=1.7.5
 safety>=2.3.5
+

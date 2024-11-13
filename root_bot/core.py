@@ -9,6 +9,7 @@ from collections import deque
 from typing import List, Dict, Any, Optional, Union
 from .config.config import CONFIG
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from .task_manager import TaskManager
 
 class LLMInterface:
     def __init__(self, model_name="Mozilla/Llama-3.2-1B-Instruct"):
@@ -113,23 +114,22 @@ class RootBot:
             os.replace(temp_path, self.long_term_memory_path)
         except Exception as e:
             self.logger.error(f"Failed to save long-term memory: {str(e)}")
-
     def add_to_memory(self, 
                      event: Dict[str, Any], 
                      long_term: bool = False,
                      priority: int = 1) -> str:
         """Add event to memory with priority and deduplication"""
-        entry = MemoryEntry(event['type'], event, priority)
-        
-        # Check for duplicates in short-term memory
-        if not any(e.id == entry.id for e in self.short_term_memory):
-            self.short_term_memory.append(entry)
+        entry = MemoryEntry(event['type'], event['data'], priority)
         
         if long_term:
-            # Check for duplicates in long-term memory
+            # Add only to long-term memory
             if not any(e.id == entry.id for e in self.long_term_memory):
                 self.long_term_memory.append(entry)
                 self.save_long_term_memory()
+        else:
+            # Add only to short-term memory
+            if not any(e.id == entry.id for e in self.short_term_memory):
+                self.short_term_memory.append(entry)
         
         return entry.id
 
@@ -138,6 +138,7 @@ class RootBot:
                     time_range: Optional[tuple] = None,
                     priority_min: int = 1) -> List[Dict[str, Any]]:
         """Query memory with filtering and sorting"""
+
         results = []
         
         # Combine both memories for searching
@@ -347,6 +348,16 @@ class RootBot:
         
         self.save_long_term_memory()
         self.logger.info("RootBot shutdown complete")
+
+
+
+
+
+
+
+
+
+
 
 
 

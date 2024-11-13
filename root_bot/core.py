@@ -11,21 +11,14 @@ from .config.config import CONFIG
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class LLMInterface:
-    def __init__(self, model_name="Mozilla/Llama-3.2-1B-Instruct-llamafile"):
-        print("Loading LLM model, this may take a while...")
+    def __init__(self, model_name="Mozilla/Llama-3.2-1B-Instruct"):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name)
-        print("LLM model loaded successfully.")
 
-    def generate_response(self, prompt, max_length=100):
+    def generate_response(self, prompt, max_length=50):
         inputs = self.tokenizer(prompt, return_tensors="pt")
-        outputs = self.model.generate(
-            inputs.input_ids, 
-            max_length=max_length, 
-            num_return_sequences=1
-        )
-        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return response
+        outputs = self.model.generate(inputs.input_ids, max_length=max_length)
+        return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 class MemoryEntry:
     """Structured memory entry with metadata"""

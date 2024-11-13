@@ -14,7 +14,7 @@ An intelligent, autonomous system administration bot powered by Python and LLM t
 - Anomaly detection and alerting
 
 ### 🧠 Intelligent Decision Making
-- LLM-powered system analysis
+- LLM-powered system analysis using Mozilla's Llama 3.2 1B model
 - Automated resource optimization
 - Predictive maintenance
 - Smart task prioritization
@@ -34,4 +34,10 @@ An intelligent, autonomous system administration bot powered by Python and LLM t
 ## 🚀 Quick Start
 
 ### Prerequisites
+- Python 3.10 or higher
+- pip package manager
+- System administrator privileges
+
+### Standard Installation
+1. Clone the repository:
 

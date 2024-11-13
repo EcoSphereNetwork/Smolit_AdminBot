@@ -38,7 +38,7 @@ mkdir -p /usr/local/bin
 mkdir -p models logs memory
 
 # Install Python dependencies
-pip install -r requiements.txt
+pip install -r requirements.txt
 
 # Download Llama model
 echo "Downloading Llama 3.2 1B model..."

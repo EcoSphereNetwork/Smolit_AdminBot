@@ -12,7 +12,7 @@ CONFIG = {
     'LLAMAFILE_SETTINGS': {
         'ctx_size': 2048,
         'threads': os.cpu_count() or 4,
-        'temp': 0.7,
+        'temp': 0.2,
         'embedding': True,
         'gpu_layers': 0  # Set to higher number if GPU available
     },

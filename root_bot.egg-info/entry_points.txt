@@ -1,2 +1,0 @@
-[console_scripts]
-rootbot = root_bot.__main__:main

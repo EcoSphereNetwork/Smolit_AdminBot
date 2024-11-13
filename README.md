@@ -1,39 +1,37 @@
-# Smolit_AdminBot (RootBot)
+# 🤖 RootBot (Smolit_AdminBot)
 
-An intelligent, autonomous system administration bot built with Python and LLM technology for efficient system management and monitoring.
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/EcoSphereNetwork/Smolit_AdminBot)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## 🌟 Features
+An intelligent, autonomous system administration bot powered by Python and LLM technology. RootBot monitors, manages, and optimizes your system resources while providing intelligent insights and automated responses to system events.
 
-### System Monitoring
+## ✨ Features
+
+### 🔍 System Monitoring
 - Real-time CPU, memory, and disk usage tracking
 - Network traffic and connection monitoring
-- Process management and resource allocation
+- Process management with resource limits
 - Anomaly detection and alerting
 
-### Intelligent Decision Making
+### 🧠 Intelligent Decision Making
 - LLM-powered system analysis
 - Automated resource optimization
 - Predictive maintenance
 - Smart task prioritization
 
-### Security
+### 🛡️ Security
 - Command whitelisting and blacklisting
 - Secure execution environment
 - Permission-based access control
-- Audit logging and monitoring
+- Comprehensive audit logging
 
-### Memory Management
+### 💾 Memory Management
 - Short-term and long-term memory systems
 - Priority-based event storage
 - Automatic memory compaction
 - Persistent state management
 
-## 🚀 Installation
+## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8+
-- Root access (for system monitoring)
-- Sufficient disk space for logs and memory storage
-
-### Basic Installation
 

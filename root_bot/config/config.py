@@ -1,6 +1,10 @@
 import os
 
 CONFIG = {
+    # Version Control
+    'VERSION_CHECK': True,
+    'AUTO_UPDATE': False,
+    
     # LlamaFile settings
     'LLAMAFILE_PATH': '/usr/local/bin/llamafile',
     'MODEL_PATH': os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models/TinyLlama-1.1B-Chat-v1.0.Q4_K_M.gguf'),
@@ -13,6 +17,7 @@ CONFIG = {
         'gpu_layers': 0  # Set to higher number if GPU available
     },
     
+    # Directory settings
     'LOG_DIR': os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs'),
     'MEMORY_DIR': os.path.join(os.path.dirname(os.path.dirname(__file__)), 'memory'),
     
@@ -68,6 +73,41 @@ CONFIG = {
         'threshold_std_dev': 2.0,
         'min_data_points': 10,
         'window_size': 100
+    },
+    
+    # Notification settings
+    'NOTIFICATIONS': {
+        'email': {
+            'enabled': False,
+            'smtp_server': 'smtp.gmail.com',
+            'smtp_port': 587,
+            'use_tls': True,
+            'from': 'rootbot@example.com',
+            'to': 'admin@example.com',
+            'username': '',
+            'password': ''
+        },
+        'slack': {
+            'enabled': False,
+            'webhook_url': ''
+        },
+        'telegram': {
+            'enabled': False,
+            'bot_token': '',
+            'chat_id': ''
+        }
+    },
+    
+    # Logging settings
+    'LOGGING': {
+        'level': 'INFO',
+        'format': '%(asctime)s - %(levelname)s - [%(name)s] - %(message)s',
+        'date_format': '%Y-%m-%d %H:%M:%S',
+        'file_logging': True,
+        'console_logging': True,
+        'log_rotation': True,
+        'max_log_size': 10 * 1024 * 1024,  # 10MB
+        'backup_count': 5
     }
 }
 

@@ -14,12 +14,31 @@ An intelligent, autonomous system administration bot powered by Python and Mozil
   - [Standard Installation](#standard-installation)
   - [Docker Installation](#docker-installation)
 - [Configuration](#-configuration)
+  - [Basic Configuration](#basic-configuration)
+  - [Advanced Configuration](#advanced-configuration)
+  - [Security Settings](#security-settings)
+  - [LLM Configuration](#llm-configuration)
 - [Usage](#-usage)
+  - [Basic Usage](#basic-usage)
+  - [Advanced Features](#advanced-features)
+  - [API Endpoints](#api-endpoints)
 - [Development](#-development)
+  - [Setting Up Dev Environment](#setting-up-dev-environment)
+  - [Code Style Guide](#code-style-guide)
+  - [Making Changes](#making-changes)
 - [Testing](#-testing)
+  - [Running Tests](#running-tests)
+  - [Writing Tests](#writing-tests)
+  - [CI/CD Integration](#cicd-integration)
 - [Troubleshooting](#-troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Debug Mode](#debug-mode)
+  - [Logs](#logs)
 - [Contributing](#-contributing)
+  - [Contribution Process](#contribution-process)
+  - [Code Review Process](#code-review-process)
 - [License](#-license)
+- [Support](#-support)
 
 ## ✨ Features
 
@@ -80,7 +99,6 @@ An intelligent, autonomous system administration bot powered by Python and Mozil
 
 ### Standard Installation
 
-1. Clone the repository:
-
-2. Create a virtual environment (recommended):
+#### Prerequisites Check
+Before installation, ensure your system meets all requirements:
 

@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
-COPY requiements-dev.txt .
-RUN pip install --no-cache-dir -r requiements-dev.txt
+COPY requirements-dev.txt .
+RUN pip install --no-cache-dir -r requirements-dev.txt
 
 # Install test dependencies
 RUN pip install --no-cache-dir \

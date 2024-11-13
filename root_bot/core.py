@@ -8,6 +8,24 @@ from datetime import datetime
 from collections import deque
 from typing import List, Dict, Any, Optional, Union
 from .config.config import CONFIG
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+class LLMInterface:
+    def __init__(self, model_name="Mozilla/Llama-3.2-1B-Instruct-llamafile"):
+        print("Loading LLM model, this may take a while...")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModelForCausalLM.from_pretrained(model_name)
+        print("LLM model loaded successfully.")
+
+    def generate_response(self, prompt, max_length=100):
+        inputs = self.tokenizer(prompt, return_tensors="pt")
+        outputs = self.model.generate(
+            inputs.input_ids, 
+            max_length=max_length, 
+            num_return_sequences=1
+        )
+        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        return response
 
 class MemoryEntry:
     """Structured memory entry with metadata"""
@@ -29,6 +47,9 @@ class MemoryEntry:
 
 class RootBot:
     def __init__(self):
+        print("Initializing RootBot...")
+        self.llm = LLMInterface()
+        print("RootBot initialized successfully.")
         self.setup_logging()
         self.short_term_memory = deque(maxlen=CONFIG['SHORT_TERM_MEMORY_SIZE'])
         self.long_term_memory_path = os.path.join(

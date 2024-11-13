@@ -1,7 +1,8 @@
 psutil>=5.9.0
-requests>=2.25.0
-python-daemon>=2.3.0
-numpy>=1.24.0
+watchdog>=3.0.0
+transformers>=4.30.0
 torch>=2.0.0
-transformers>=4.36.0
+numpy>=1.24.0
+flask>=2.0.0
+python-dotenv>=1.0.0
 

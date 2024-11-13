@@ -10,6 +10,8 @@ from typing import List, Dict, Any, Optional, Union
 from .config.config import CONFIG
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from .task_manager import TaskManager
+from .event_handler import SystemEventHandler
+from .recovery_manager import RecoveryManager
 
 class LLMInterface:
     def __init__(self, model_name="Mozilla/Llama-3.2-1B-Instruct"):
@@ -42,8 +44,6 @@ class MemoryEntry:
 class RootBot:
     def __init__(self):
         print("Initializing RootBot...")
-        self.llm = LLMInterface()
-        print("RootBot initialized successfully.")
         self.setup_logging()
         self.short_term_memory = deque(maxlen=CONFIG['SHORT_TERM_MEMORY_SIZE'])
         self.long_term_memory_path = os.path.join(
@@ -58,6 +58,9 @@ class RootBot:
         # Initialize components
         self.llm = LLMInterface()
         self.task_manager = TaskManager(self)
+        self.event_handler = SystemEventHandler()
+        self.recovery_manager = RecoveryManager()
+
         
         # Ensure LLM server is running
         if not self.llm._ensure_server_running():
@@ -301,11 +304,32 @@ class RootBot:
         """Main bot loop with enhanced error handling"""
         self.logger.info("RootBot started")
         
+        # Set up filesystem monitoring for critical paths
+        self.event_handler.monitor_filesystem(CONFIG['LOG_DIR'], 
+            lambda path: self.add_to_memory({'type': 'file_change', 'path': path}, priority=3))
+        
+        # Register recovery callbacks
+        self.event_handler.register_recovery_callback('cpu_percent',
+            lambda value: self.recovery_manager.release_resources('high_cpu_process', value))
+        self.event_handler.register_recovery_callback('memory_percent',
+            lambda value: self.recovery_manager.release_resources('high_memory_process', value))
+        
         while self.running:
             try:
-                # Monitor system
+                # Monitor system metrics
                 metrics = self.monitor_system()
                 if metrics:
+                    # Check system health
+                    health_metrics = self.event_handler.check_system_health()
+                    for metric, value in health_metrics.items():
+                        if value > self.event_handler.metrics_thresholds.get(metric, 90):
+                            self.event_handler.handle_threshold_breach(metric, value)
+                            self.add_to_memory({
+                                'type': 'threshold_breach',
+                                'metric': metric,
+                                'value': value
+                            }, long_term=True, priority=4)
+                    
                     # Store metrics in memory
                     self.add_to_memory({
                         'type': 'system_metrics',
@@ -318,12 +342,16 @@ class RootBot:
                     
                     # Get LLM analysis if available
                     if hasattr(self, 'llm'):
-                        analysis = self.llm.analyze_system_state(metrics)
-                        if analysis['status'] != 'normal':
-                            self.add_to_memory({
-                                'type': 'system_analysis',
-                                'analysis': analysis
-                            }, long_term=True, priority=4)
+                        try:
+                            analysis = self.llm.analyze_system_state(metrics)
+                            if analysis['status'] != 'normal':
+                                self.add_to_memory({
+                                    'type': 'system_analysis',
+                                    'analysis': analysis
+                                }, long_term=True, priority=4)
+                        except Exception as e:
+                            self.logger.error(f"LLM analysis failed: {e}")
+                            self.recovery_manager.handle_llm_failure()
                 
                 # Perform maintenance if needed
                 self.perform_maintenance()
@@ -337,28 +365,30 @@ class RootBot:
             except Exception as e:
                 self.logger.error(f"Error in main loop: {str(e)}")
                 time.sleep(CONFIG['MONITORING_INTERVAL'])
-
     def shutdown(self):
         """Graceful shutdown procedure"""
         self.running = False
+        
+        # Stop event monitoring
+        self.event_handler.stop_monitoring()
         
         # Shutdown LLM interface
         if hasattr(self, 'llm'):
             self.llm.shutdown()
         
+        # Save memory state
         self.save_long_term_memory()
+        
+        # Final cleanup
+        self.recovery_manager.cleanup_temp_files(CONFIG['LOG_DIR'])
+        
         self.logger.info("RootBot shutdown complete")
 
+            except Exception as e:
+                self.logger.error(f"Error in main loop: {str(e)}")
+                time.sleep(CONFIG['MONITORING_INTERVAL'])
 
-
-
-
-
-
-
-
-
-
-
+                self.logger.error(f"Error in main loop: {str(e)}")
+                time.sleep(CONFIG['MONITORING_INTERVAL'])
 
 

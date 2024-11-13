@@ -40,6 +40,15 @@ class RootBot:
         self.last_maintenance = 0
         self.maintenance_interval = 3600  # 1 hour
         
+        # Initialize components
+        self.llm = LLMInterface()
+        self.task_manager = TaskManager(self)
+        
+        # Ensure LLM server is running
+        if not self.llm._ensure_server_running():
+            self.logger.error("Failed to start LLM server")
+
+        
     def setup_logging(self):
         """Configure logging with proper format and security measures"""
         log_file = os.path.join(CONFIG['LOG_DIR'], 
@@ -317,6 +326,14 @@ class RootBot:
     def shutdown(self):
         """Graceful shutdown procedure"""
         self.running = False
+        
+        # Shutdown LLM interface
+        if hasattr(self, 'llm'):
+            self.llm.shutdown()
+        
         self.save_long_term_memory()
         self.logger.info("RootBot shutdown complete")
+
+
+
 

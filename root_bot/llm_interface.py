@@ -1,18 +1,30 @@
-import subprocess
 import json
 import logging
 import time
 from typing import Optional, Dict, Any, Union
 from .config.config import CONFIG
+from .llama_manager import LlamaManager
+import requests
 
 class LLMInterface:
     def __init__(self):
         self.logger = logging.getLogger('RootBot.LLM')
-        self.model_path = CONFIG['MODEL_PATH']
-        self.llamafile_path = CONFIG['LLAMAFILE_PATH']
+        self.llama_manager = LlamaManager()
         self.fallback_mode = False
         self.last_error_time = 0
         self.error_cooldown = 300  # 5 minutes cooldown
+        self.api_url = f"http://localhost:{CONFIG['LLAMAFILE_PORT']}/completion"
+
+    def _ensure_server_running(self) -> bool:
+        """Ensure LlamaFile server is running"""
+        if not self.llama_manager.is_server_running():
+            success, msg = self.llama_manager.start_server()
+            if not success:
+                self.logger.error(f"Failed to start LlamaFile server: {msg}")
+                return False
+            # Wait for server to initialize
+            time.sleep(5)
+        return True
 
     def _handle_llm_error(self, error: Exception) -> None:
         """Handle LLM errors with cooldown and fallback"""
@@ -37,36 +49,34 @@ class LLMInterface:
                          context: Optional[Dict[str, Any]] = None,
                          max_retries: int = 3,
                          timeout: int = 30) -> str:
-        """Generate a response with retries and fallback"""
+        """Generate a response using LlamaFile server API"""
         if self.fallback_mode:
+            return self._fallback_response(prompt)
+
+        if not self._ensure_server_running():
+            self._handle_llm_error(Exception("Server not available"))
             return self._fallback_response(prompt)
 
         for attempt in range(max_retries):
             try:
-                cmd = [
-                    self.llamafile_path,
-                    '-m', self.model_path,
-                    '--temp', '0.7',
-                    '--ctx-size', '2048',
-                    '-p', prompt
-                ]
+                payload = {
+                    "prompt": prompt,
+                    "temperature": CONFIG['LLAMAFILE_SETTINGS']['temp'],
+                    "max_tokens": 500
+                }
                 
                 if context:
-                    cmd.extend(['--context', json.dumps(context)])
+                    payload["context"] = context
                 
-                process = subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
+                response = requests.post(
+                    self.api_url,
+                    json=payload,
+                    timeout=timeout
                 )
+                response.raise_for_status()
                 
-                output, error = process.communicate(timeout=timeout)
-                
-                if process.returncode != 0:
-                    raise RuntimeError(f"LLM process failed: {error}")
-                    
-                return output.strip()
+                result = response.json()
+                return result.get('content', '').strip()
                 
             except Exception as e:
                 self.logger.warning(f"LLM attempt {attempt + 1} failed: {str(e)}")
@@ -161,4 +171,9 @@ class LLMInterface:
                 "concerns": ["Failed to analyze command safety"],
                 "alternatives": []
             }
+
+    def shutdown(self):
+        """Cleanup and shutdown LLM interface"""
+        if self.llama_manager.is_server_running():
+            self.llama_manager.stop_server()
 

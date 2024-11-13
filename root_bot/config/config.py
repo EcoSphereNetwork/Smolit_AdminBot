@@ -1,8 +1,18 @@
 import os
 
 CONFIG = {
+    # LlamaFile settings
     'LLAMAFILE_PATH': '/usr/local/bin/llamafile',
-    'MODEL_PATH': 'tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf',
+    'MODEL_PATH': os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models/TinyLlama-1.1B-Chat-v1.0.Q4_K_M.gguf'),
+    'LLAMAFILE_PORT': 8080,
+    'LLAMAFILE_SETTINGS': {
+        'ctx_size': 2048,
+        'threads': os.cpu_count() or 4,
+        'temp': 0.7,
+        'embedding': True,
+        'gpu_layers': 0  # Set to higher number if GPU available
+    },
+    
     'LOG_DIR': os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs'),
     'MEMORY_DIR': os.path.join(os.path.dirname(os.path.dirname(__file__)), 'memory'),
     
@@ -62,7 +72,13 @@ CONFIG = {
 }
 
 # Ensure required directories exist
-for dir_path in [CONFIG['LOG_DIR'], CONFIG['MEMORY_DIR']]:
+required_dirs = [
+    CONFIG['LOG_DIR'],
+    CONFIG['MEMORY_DIR'],
+    os.path.dirname(CONFIG['MODEL_PATH'])
+]
+
+for dir_path in required_dirs:
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 

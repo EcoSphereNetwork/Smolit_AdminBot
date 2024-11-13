@@ -1,0 +1,15 @@
+[Unit]
+Description=RootBot Autonomous System Administration Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/workspace/Smolit_AdminBot
+ExecStart=/usr/bin/python3 -m root_bot
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

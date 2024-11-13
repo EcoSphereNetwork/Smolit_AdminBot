@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: root_bot
+Version: 0.1.0
+Summary: An autonomous system administration bot
+Author: RootBot Team
+Requires-Python: >=3.8
+Requires-Dist: psutil>=5.9.0

@@ -82,3 +82,5 @@ An intelligent, autonomous system administration bot powered by Python and Mozil
 
 1. Clone the repository:
 
+2. Create a virtual environment (recommended):
+

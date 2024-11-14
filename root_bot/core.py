@@ -12,6 +12,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from .task_manager import TaskManager
 from .event_handler import SystemEventHandler
 from .recovery_manager import RecoveryManager
+from .security_manager import SecurityManager
+
+class SecurityError(Exception):
+    """Custom exception for security-related errors"""
+    pass
 
 class LLMInterface:
     def __init__(self, model_name="Mozilla/Llama-3.2-1B-Instruct"):
@@ -45,6 +50,19 @@ class RootBot:
     def __init__(self):
         print("Initializing RootBot...")
         self.setup_logging()
+        
+        # Initialize security manager
+        self.security_manager = SecurityManager({
+            'config': os.path.join(CONFIG['CONFIG_DIR'], 'config.py'),
+            'memory': os.path.join(CONFIG['MEMORY_DIR'], CONFIG['LONG_TERM_MEMORY_FILE']),
+            'service': '/etc/systemd/system/rootbot.service'
+        })
+        
+        # Verify critical files before proceeding
+        if not all(self.security_manager.verify_file_integrity(f) for f in ['config', 'memory']):
+            self.logger.critical("Critical file integrity check failed")
+            raise SecurityError("File integrity verification failed")
+
         self.short_term_memory = deque(maxlen=CONFIG['SHORT_TERM_MEMORY_SIZE'])
         self.long_term_memory_path = os.path.join(
             CONFIG['MEMORY_DIR'],
@@ -68,19 +86,66 @@ class RootBot:
 
         
     def setup_logging(self):
-        """Configure logging with proper format and security measures"""
+        """Configure logging with structured JSON format and security audit trails"""
         log_file = os.path.join(CONFIG['LOG_DIR'], 
                                f'root_bot_{datetime.now().strftime("%Y%m%d")}.log')
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - [%(name)s] - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file),
-                logging.StreamHandler()
-            ]
-        )
-        self.logger = logging.getLogger('RootBot')
+        audit_file = os.path.join(CONFIG['LOG_DIR'],
+                                f'audit_{datetime.now().strftime("%Y%m%d")}.log')
         
+        # Main application logger
+        main_handler = logging.FileHandler(log_file)
+        main_handler.setFormatter(logging.Formatter(
+            '{"timestamp":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s",'
+            '"message":"%(message)s","module":"%(module)s"}'
+        ))
+
+    def save_long_term_memory(self):
+        """Save long-term memory with integrity verification"""
+        try:
+            # Verify file integrity before saving
+            if not self.security_manager.verify_file_integrity('memory'):
+                self.logger.critical("Memory file integrity check failed before save")
+                raise SecurityError("Memory file integrity compromised")
+
+            memory_data = [entry.to_dict() for entry in self.long_term_memory]
+            with open(self.long_term_memory_path, 'w') as f:
+                json.dump(memory_data, f, indent=2)
+            
+            # Update hash after legitimate change
+            self.security_manager.update_file_hash('memory')
+            self.audit_logger.info(
+                "Long-term memory updated",
+                extra={'user': 'system', 'action': 'memory_update'}
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to save long-term memory: {str(e)}")
+            raise
+
+        
+        # Security audit logger
+        audit_handler = logging.FileHandler(audit_file)
+        audit_handler.setFormatter(logging.Formatter(
+            '{"timestamp":"%(asctime)s","level":"%(levelname)s","type":"security_audit",'
+            '"event":"%(message)s","user":"%(user)s"}'
+        ))
+        
+        # Console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(logging.Formatter(
+            '%(asctime)s - %(levelname)s - [%(name)s] - %(message)s'
+        ))
+        
+        # Setup main logger
+        self.logger = logging.getLogger('RootBot')
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(main_handler)
+        self.logger.addHandler(console_handler)
+        
+        # Setup audit logger
+        self.audit_logger = logging.getLogger('RootBot.audit')
+        self.audit_logger.setLevel(logging.INFO)
+        self.audit_logger.addHandler(audit_handler)
+
     def load_long_term_memory(self):
         """Load long-term memory with error recovery"""
         try:
@@ -107,16 +172,31 @@ class RootBot:
                     self.logger.error(f"Failed to create memory backup: {str(be)}")
 
     def save_long_term_memory(self):
-        """Save long-term memory with atomic write"""
+        """Save long-term memory with integrity verification and atomic write"""
         try:
+            # Verify file integrity before saving
+            if not self.security_manager.verify_file_integrity('memory'):
+                self.logger.critical("Memory file integrity check failed before save")
+                raise SecurityError("Memory file integrity compromised")
+
             # Write to temporary file first
             temp_path = f"{self.long_term_memory_path}.tmp"
             with open(temp_path, 'w') as f:
                 json.dump([entry.to_dict() for entry in self.long_term_memory], f)
+            
             # Atomic rename
             os.replace(temp_path, self.long_term_memory_path)
+            
+            # Update hash after legitimate change
+            self.security_manager.update_file_hash('memory')
+            self.audit_logger.info(
+                "Long-term memory updated",
+                extra={'user': 'system', 'action': 'memory_update'}
+            )
         except Exception as e:
             self.logger.error(f"Failed to save long-term memory: {str(e)}")
+            raise
+
     def add_to_memory(self, 
                      event: Dict[str, Any], 
                      long_term: bool = False,
@@ -390,5 +470,10 @@ class RootBot:
 
                 self.logger.error(f"Error in main loop: {str(e)}")
                 time.sleep(CONFIG['MONITORING_INTERVAL'])
+
+
+
+
+
 
 

@@ -1,11 +1,11 @@
-# 🤖 RootBot (Smolit_AdminBot)
+# Smolit_AdminBot
 
 [![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/EcoSphereNetwork/Smolit_AdminBot)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-yellow.svg)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://www.docker.com/)
 
-An intelligent, autonomous system administration bot powered by Python and Mozilla's Llama 3.2 1B LLM technology. RootBot monitors, manages, and optimizes your system resources while providing intelligent insights and automated responses to system events.
+A robust, AI-powered system administration bot with advanced monitoring, security, and self-healing capabilities.
 
 ## 📋 Table of Contents
 - [Features](#-features)
@@ -40,39 +40,35 @@ An intelligent, autonomous system administration bot powered by Python and Mozil
 - [License](#-license)
 - [Support](#-support)
 
-## ✨ Features
+## Features
 
-### 🔍 System Monitoring
-- Real-time CPU, memory, and disk usage tracking
-- Network traffic and connection monitoring
-- Process management with resource limits
-- Anomaly detection and alerting
-- Customizable monitoring intervals
-- Resource threshold configuration
+### Security
+- File integrity monitoring with SHA-256 verification
+- AppArmor profile for sandboxed operation
+- Input validation and sanitization
+- Structured security audit logging
+- Automated security scanning
 
-### 🧠 Intelligent Decision Making
-- LLM-powered system analysis using Mozilla's Llama 3.2 1B model
-- Automated resource optimization
-- Predictive maintenance
-- Smart task prioritization
-- Context-aware command evaluation
-- Adaptive resource management
+### Monitoring
+- Real-time system resource monitoring
+- File system change detection
+- Process health checking
+- ML-based anomaly detection
+- Comprehensive event logging
 
-### 🛡️ Security
-- Command whitelisting and blacklisting
-- Secure execution environment
-- Permission-based access control
-- Comprehensive audit logging
-- Secure command validation
-- Resource usage limits
+### Reliability
+- Watchdog process monitoring
+- Automatic process recovery
+- Retry mechanisms with exponential backoff
+- Task persistence and recovery
+- Structured error handling
 
-### 💾 Memory Management
-- Short-term and long-term memory systems
-- Priority-based event storage
-- Automatic memory compaction
-- Persistent state management
-- Configurable retention policies
-- Memory optimization
+### Management
+- Advanced CLI interface
+- JSON-structured logging
+- Resource usage analytics
+- Configuration management
+- Automated maintenance
 
 ## 📦 Requirements
 
@@ -95,30 +91,7 @@ An intelligent, autonomous system administration bot powered by Python and Mozil
 - Docker 20.10+ (for containerized deployment)
 - NVIDIA GPU with CUDA support (for improved LLM performance)
 
-## 🚀 Installation
+## Installation
 
-### Standard Installation
-....
+1. Clone the repository:
 
-#### Prerequisites Check
-Before installation, ensure your system meets all requirements:
-...
-
-# Next Steps:
-1. Gaps and Recommendations
-
-    Limited Event Types:
-        The bot primarily focuses on resource and health metrics. It could benefit from monitoring additional system-level events, such as unauthorized file access or hardware failures.
-        Recommendation: Integrate libraries like inotify or psutil for file system and process-level event detection.
-
-    Fallback Mode Limitations:
-        The LLM fallback mode relies on predefined logic, which may not fully replicate the LLM's capabilities.
-        Recommendation: Enhance the fallback logic by integrating simpler rule-based AI for decision-making when the LLM is unavailable.
-
-    Proactive Recovery Mechanisms:
-        While the bot logs threshold breaches, it doesn't explicitly attempt recovery (e.g., restarting services or releasing resources).
-        Recommendation: Implement self-healing features, such as restarting failed tasks or dynamically optimizing resource allocation.
-
-    Configuration Changes:
-        Configuration values are static, relying on a file (rootbot.conf).
-        Recommendation: Allow real-time updates to configurations without restarting the bot, using a configuration management library like pyhocon.

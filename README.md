@@ -98,7 +98,27 @@ An intelligent, autonomous system administration bot powered by Python and Mozil
 ## 🚀 Installation
 
 ### Standard Installation
+....
 
 #### Prerequisites Check
 Before installation, ensure your system meets all requirements:
+...
 
+# Next Steps:
+1. Gaps and Recommendations
+
+    Limited Event Types:
+        The bot primarily focuses on resource and health metrics. It could benefit from monitoring additional system-level events, such as unauthorized file access or hardware failures.
+        Recommendation: Integrate libraries like inotify or psutil for file system and process-level event detection.
+
+    Fallback Mode Limitations:
+        The LLM fallback mode relies on predefined logic, which may not fully replicate the LLM's capabilities.
+        Recommendation: Enhance the fallback logic by integrating simpler rule-based AI for decision-making when the LLM is unavailable.
+
+    Proactive Recovery Mechanisms:
+        While the bot logs threshold breaches, it doesn't explicitly attempt recovery (e.g., restarting services or releasing resources).
+        Recommendation: Implement self-healing features, such as restarting failed tasks or dynamically optimizing resource allocation.
+
+    Configuration Changes:
+        Configuration values are static, relying on a file (rootbot.conf).
+        Recommendation: Allow real-time updates to configurations without restarting the bot, using a configuration management library like pyhocon.

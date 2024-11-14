@@ -6,39 +6,44 @@ import subprocess
 from typing import Optional, Dict, Any, Union
 from .config.config import CONFIG
 import requests
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from .retry_utils import retry_with_backoff, RetryError
+
+class LLMError(Exception):
+    """Base exception for LLM-related errors"""
+    pass
+
+class LLMConnectionError(LLMError):
+    """Raised when connection to LLM fails"""
+    pass
+
+class LLMGenerationError(LLMError):
+    """Raised when text generation fails"""
+    pass
 
 class LLMInterface:
-    def __init__(self, model_path=None):
-        self.logger = logging.getLogger('RootBot.LLM')
-        if model_path is None:
-            model_path = os.path.join(os.path.dirname(__file__), 'models/Llama-3.2-1B-Instruct.Q6_K.llamafile')
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model file not found: {model_path}")
-        self.model_path = model_path
-        # Make the model file executable
-        os.chmod(model_path, 0o755)
-        self.process = None
-        self.port = CONFIG.get('LLAMAFILE_PORT', 8080)
+    def __init__(self, model_name="Mozilla/Llama-3.2-1B-Instruct"):
+        self.logger = logging.getLogger('RootBot.llm')
+        self._load_model(model_name)
         self.fallback_mode = False
         self.last_error_time = 0
         self.error_cooldown = 300  # 5 minutes cooldown
-        self.api_url = f"http://localhost:{self.port}/completion"
 
-    def _ensure_server_running(self) -> bool:
-        """Ensure the llamafile server is running"""
-        if self.process is None or self.process.poll() is not None:
-            try:
-                self.process = subprocess.Popen(
-                    [self.model_path, '--server', '--port', str(self.port)],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
-                )
-                time.sleep(5)  # Wait for server to start
-                return True
-            except Exception as e:
-                logging.error(f"Failed to start LLM server: {e}")
-                return False
-        return True
+    @retry_with_backoff(
+        max_retries=3,
+        initial_delay=1.0,
+        max_delay=10.0,
+        exceptions=(Exception,)
+    )
+    def _load_model(self, model_name: str) -> None:
+        """Load the LLM model with retry mechanism"""
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.model = AutoModelForCausalLM.from_pretrained(model_name)
+            self.logger.info(f"Successfully loaded model: {model_name}")
+        except Exception as e:
+            self.logger.error(f"Failed to load model: {str(e)}")
+            raise LLMConnectionError(f"Failed to load model {model_name}: {str(e)}")
 
     def _handle_llm_error(self, error: Exception) -> None:
         """Handle LLM errors with cooldown and fallback"""
@@ -58,46 +63,40 @@ class LLMInterface:
             })
         return "LLM unavailable - using fallback mode"
 
-    def generate_response(self, 
-                         prompt: str, 
-                         context: Optional[Dict[str, Any]] = None,
-                         max_retries: int = 3,
-                         timeout: int = 30) -> str:
-        """Generate a response using LlamaFile server API"""
+    @retry_with_backoff(
+        max_retries=2,
+        initial_delay=0.5,
+        max_delay=5.0,
+        exceptions=(Exception,)
+    )
+    def generate_response(self, prompt: str, max_length: int = 50) -> str:
+        """Generate response with retry mechanism"""
         if self.fallback_mode:
             return self._fallback_response(prompt)
 
-        if not self._ensure_server_running():
-            self._handle_llm_error(Exception("Server not available"))
-            return self._fallback_response(prompt)
-
-        for attempt in range(max_retries):
-            try:
-                payload = {
-                    "prompt": prompt,
-                    "temperature": CONFIG['LLAMAFILE_SETTINGS']['temp'],
-                    "max_tokens": 500
+        try:
+            inputs = self.tokenizer(prompt, return_tensors="pt")
+            outputs = self.model.generate(
+                inputs.input_ids,
+                max_length=max_length,
+                num_return_sequences=1,
+                no_repeat_ngram_size=2
+            )
+            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            self.logger.info(
+                "Generated response",
+                extra={
+                    'prompt_length': len(prompt),
+                    'response_length': len(response)
                 }
-                
-                if context:
-                    payload["context"] = context
-                
-                response = requests.post(
-                    self.api_url,
-                    json=payload,
-                    timeout=timeout
-                )
-                response.raise_for_status()
-                
-                result = response.json()
-                return result.get('content', '').strip()
-                
-            except Exception as e:
-                self.logger.warning(f"LLM attempt {attempt + 1} failed: {str(e)}")
-                if attempt == max_retries - 1:
-                    self._handle_llm_error(e)
-                    return self._fallback_response(prompt)
-                time.sleep(1)  # Brief pause between retries
+            )
+            
+            return response
+            
+        except Exception as e:
+            self.logger.error(f"Failed to generate response: {str(e)}")
+            raise LLMGenerationError(f"Failed to generate response: {str(e)}")
 
     def analyze_system_state(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze system metrics with enhanced context"""
@@ -111,7 +110,7 @@ class LLMInterface:
         }
         
         prompt = self._build_analysis_prompt(metrics)
-        response = self.generate_response(prompt, context=context)
+        response = self.generate_response(prompt)
         
         try:
             return json.loads(response)
@@ -192,7 +191,7 @@ Format your response as JSON with:
 <|im_end|>
 <|im_start|>assistant"""
         
-        response = self.generate_response(prompt, context=context)
+        response = self.generate_response(prompt)
         try:
             return json.loads(response)
         except json.JSONDecodeError:
@@ -205,7 +204,7 @@ Format your response as JSON with:
 
     def shutdown(self):
         """Shutdown the LLM server"""
-        if self.process:
+        if hasattr(self, 'process') and self.process:
             self.process.terminate()
             try:
                 self.process.wait(timeout=5)

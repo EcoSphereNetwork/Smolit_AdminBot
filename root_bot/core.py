@@ -13,6 +13,7 @@ from .task_manager import TaskManager
 from .event_handler import SystemEventHandler
 from .recovery_manager import RecoveryManager
 from .security_manager import SecurityManager
+from .input_validator import InputValidator
 
 class SecurityError(Exception):
     """Custom exception for security-related errors"""
@@ -470,6 +471,7 @@ class RootBot:
 
                 self.logger.error(f"Error in main loop: {str(e)}")
                 time.sleep(CONFIG['MONITORING_INTERVAL'])
+
 
 
 

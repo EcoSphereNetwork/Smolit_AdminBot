@@ -109,6 +109,36 @@ CONFIG = {
         'log_rotation': True,
         'max_log_size': 10 * 1024 * 1024,  # 10MB
         'backup_count': 5
+    },
+    
+    # Docker settings
+    'DOCKER': {
+        'resource_limits': {
+            'default_memory': '2g',
+            'default_cpu_shares': 1024,
+            'max_memory_per_container': '4g',
+            'max_cpu_shares': 2048
+        },
+        'monitoring': {
+            'stats_interval': 30,  # seconds
+            'alert_cpu_threshold': 80,  # percentage
+            'alert_memory_threshold': 80,  # percentage
+            'alert_disk_threshold': 80  # percentage
+        },
+        'security': {
+            'privileged_mode': False,
+            'allowed_capabilities': [],
+            'default_seccomp_profile': True
+        },
+        'networking': {
+            'default_network': 'bridge',
+            'exposed_port_range': (8000, 9000)
+        },
+        'cleanup': {
+            'auto_remove_stopped': False,
+            'prune_interval': 86400,  # 24 hours
+            'max_container_age': 604800  # 7 days
+        }
     }
 }
 

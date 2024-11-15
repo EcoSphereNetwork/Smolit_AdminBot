@@ -92,6 +92,77 @@ A robust, AI-powered system administration bot with advanced monitoring, securit
 - NVIDIA GPU with CUDA support (for improved LLM performance)
 
 ## Installation
+Standard Installation
 
-1. Clone the repository:
+Clone the repository:
+  
+    git clone https://github.com/EcoSphereNetwork/Smolit_AdminBot.git
+    cd Smolit_AdminBot
+
+Install Python dependencies:
+
+    pip install -r requirements.txt
+
+Run the bot:
+
+    python rootbot-cli.py
+
+Docker Installation
+
+Ensure Docker and Docker Compose are installed.
+
+Build and start the container:
+
+    docker-compose up --build
+
+Access the bot interface via the CLI or API:
+
+    docker exec -it smolit_adminbot python rootbot-cli.py
+
+Stop the container:
+
+    docker-compose down
+
+Usage
+Basic Usage
+
+Run the bot in CLI mode:
+
+    python rootbot-cli.py
+
+Advanced Features
+
+  - **Configuration:** Use the rootbot.conf file to customize bot settings.
+  - **Monitoring:** Run watchdog.py to monitor system health and generate reports.
+  - **Testing:** Execute test_bot.py for system checks:
+
+        python test_bot.py
+
+Contributing
+
+Contributions are welcome! To contribute:
+
+    Fork the repository.
+    Create a feature branch:
+
+git checkout -b feature-name
+
+Commit your changes:
+
+git commit -m "Feature description"
+
+Push the branch:
+
+    git push origin feature-name
+
+    Submit a Pull Request.
+
+Refer to the CONTRIBUTING.md file for more details.
+License
+
+Smolit_AdminBot is licensed under the MIT License.
+Support
+
+For issues or feedback, please open an issue in the GitHub repository.
+
 
